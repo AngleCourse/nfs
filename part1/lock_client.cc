@@ -2,9 +2,9 @@
 
 #include "lock_client.h"
 #include "rpc.h"
-#include <arpa/inet.h>
+#include <arpa/inet.h> //Provide methods for stream order manipulation.
 
-#include <sstream>
+#include <sstream>//Header providing string stream classes
 #include <iostream>
 #include <stdio.h>
 
