@@ -6,8 +6,8 @@
 #include <unistd.h>
 #include <arpa/inet.h>
 
-lock_server::lock_server():
-  nacquire (0)
+lock_server::lock_server(bool _debug):
+  nacquire (0), debug (_debug)
 {
 }
 

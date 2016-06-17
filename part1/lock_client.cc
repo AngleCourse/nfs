@@ -8,8 +8,9 @@
 #include <iostream>
 #include <stdio.h>
 
-lock_client::lock_client(std::string dst)
+lock_client::lock_client(std::string dst, bool _debug)
 {
+  debug = _debug;
   sockaddr_in dstsock;
   make_sockaddr(dst.c_str(), &dstsock);
   cl = new rpcc(dstsock);

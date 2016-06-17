@@ -13,9 +13,10 @@ class lock_server {
 
  protected:
   int nacquire;
+  bool debug;
 
  public:
-  lock_server();
+  lock_server(bool _debug=false);
   ~lock_server() {};
   lock_protocol::status stat(int clt, lock_protocol::lockid_t lid, int &);
 };

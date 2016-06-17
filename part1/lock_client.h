@@ -12,8 +12,9 @@
 class lock_client {
  protected:
   rpcc *cl;
+  bool debug; //Debug flag
  public:
-  lock_client(std::string d);
+  lock_client(std::string d, bool _debug=false);
   virtual ~lock_client() {};
   virtual lock_protocol::status acquire(lock_protocol::lockid_t);
   virtual lock_protocol::status release(lock_protocol::lockid_t);
