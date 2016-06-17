@@ -22,7 +22,9 @@ main(int argc, char *argv[])
   }
 
 	dst = argv[1];
-  lc = new lock_client(dst);
+  lc = new lock_client(dst, true);
   r = lc->stat(1);
   printf ("stat returned %d\n", r);
+  lc->acquire(2);
+  lc->release(3);
 }

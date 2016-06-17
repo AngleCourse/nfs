@@ -31,12 +31,27 @@ lock_client::stat(lock_protocol::lockid_t lid)
 lock_protocol::status
 lock_client::acquire(lock_protocol::lockid_t lid)
 {
-  return lock_protocol::OK;
+  int rpc_ret;
+  int ret = cl->call(lock_protocol::acquire, cl->id(), lid, rpc_ret);
+  assert(ret == lock_protocol::OK);
+  if(debug){
+    printf("Client %d issues lock %lld, got result: %d\n", 
+        cl->id(), lid, rpc_ret);
+  }
+  return rpc_ret;
 }
 
 lock_protocol::status
 lock_client::release(lock_protocol::lockid_t lid)
 {
-  return lock_protocol::OK;
+  
+  int rpc_ret;
+  int ret = cl->call(lock_protocol::release, cl->id(), lid, rpc_ret);
+  assert (ret == lock_protocol::OK);
+  if(debug){
+    printf("Client %d issues lock %lld, got result: %d\n", 
+        cl->id(), lid, rpc_ret);
+  }
+  return rpc_ret;
 }
 
