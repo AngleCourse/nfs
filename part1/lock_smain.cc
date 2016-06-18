@@ -20,7 +20,7 @@ main(int argc, char *argv[])
 
 
   // Create a lock server.
-  lock_server ls(true);
+  lock_server ls;
   // Create a RPC server
   rpcs server(htons(atoi(argv[1])));
   server.reg(lock_protocol::stat, &ls, &lock_server::stat);

@@ -4,6 +4,7 @@
 #include "rpc.h"
 #include "method_thread.h"
 #include <arpa/inet.h>
+#include <algorithm>
 #include <netdb.h>
 #include <strings.h>
 #include <sys/select.h>
@@ -22,6 +23,10 @@ rpcc::rpcc(sockaddr_in _dst, bool _debug)
 
   // Create a thread that runs clock_loop to enable retransmissions
   // ** YOU FILL THIS IN FOR LAB 1 **
+  if((th_clock_loop= method_thread(this, false, &rpcc::clock_loop)) == 0){
+    perror("rpcc::rpcc pthread_create");
+    exit(1);
+  }
 
   if((th_chan_loop = method_thread(this, false, &rpcc::chan_loop)) == 0){
     perror("rpcc::rpcc pthread_create");
@@ -422,7 +427,7 @@ void rpcc::update_xid_rep(unsigned int xid)
 }
 
 rpcs::rpcs(unsigned int port, bool _debug)
-  : debug (_debug), chan(port, _debug), _vivaldi(NULL), nthread(0), deleting(false), counting(0) 
+  : debug (_debug),  chan(port, _debug), _vivaldi(NULL), nthread(0), deleting(false), counting(0) 
 {
   assert(pthread_mutex_init(&procs_m, 0) == 0);
   assert(pthread_mutex_init(&reply_window_m, 0) == 0);
@@ -611,7 +616,8 @@ void rpcs::add_reply(unsigned int clt_nonce, unsigned int xid,
              marshall &rep)
 {
   assert(pthread_mutex_lock(&reply_window_m) == 0);
-
+  ReplyCacheEntry entry = {clt_nonce, xid, &rep};
+  reply_cache.push_back(entry);
   // remember the reply for this xid.
   // ** YOU FILL THIS IN FOR LAB 1 **
 
@@ -639,12 +645,20 @@ rpcs::rpcstate_t rpcs::checkduplicate_and_update(unsigned int clt_nonce,
 	     unsigned int xid, unsigned int xid_rep, marshall &rep)
 {
   rpcstate_t r = NEW;
+  ReplyCacheEntry target = {clt_nonce, xid, &rep};
 
   assert(pthread_mutex_lock(&reply_window_m) == 0);
 
   // check if xid is a duplicate, and if not update list of received xid, so
   // that checking and update is atomic.
   // fill in xid_rep if we have the reply (state is DONE)
+  std::vector<ReplyCacheEntry>::iterator it;
+  it = std::find(reply_cache.begin(), reply_cache.end(), target);
+  if(it != reply_cache.end()){
+    it->xid = xid_rep;
+    it->rep = &rep;
+    r = DONE;
+  }
 
   // ** YOU FILL THIS IN FOR LAB 1 **
 

@@ -23,6 +23,17 @@ class rpc_const {
   static const int bind_failure = -4;
   static const int cancel_failure = -4;
 };
+
+struct ReplyCacheEntry{
+  unsigned int clt_nonce;
+  unsigned int xid;
+  marshall *rep;
+  bool operator==(ReplyCacheEntry e){
+    return clt_nonce==e.clt_nonce &&
+      xid==e.xid;
+  }
+};
+
 // rpc client endpoint.
 // manages a socket and an xid space.
 // threaded: multiple threads can be sending RPCs,
@@ -233,6 +244,8 @@ class rpcs {
   bool lossy; // debug: drop some requests and replies
   int lossy_percent; // percentage of packets to drop if lossy is true
   class vivaldi *_vivaldi;
+
+  std::vector<ReplyCacheEntry> reply_cache;
 
   // deleting rpcs:
   pthread_t th_loop;
