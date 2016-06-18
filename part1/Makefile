@@ -1,4 +1,4 @@
-CXXFLAGS =  -g -Wall -D_FILE_OFFSET_BITS=64
+CXXFLAGS =  -g -Wall -D_FILE_OFFSET_BITS=64 -std=c++11
 FUSEFLAGS= -D_FILE_OFFSET_BITS=64 -DFUSE_USE_VERSION=25 -I/usr/local/include/fuse -I/usr/include/fuse
 LDFLAGS = -L. -L/usr/lib
 LDLIBS = -lfuse -pthread

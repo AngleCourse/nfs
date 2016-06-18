@@ -26,5 +26,5 @@ main(int argc, char *argv[])
   r = lc->stat(1);
   printf ("stat returned %d\n", r);
   lc->acquire(2);
-  lc->release(3);
+  lc->release(2);
 }
