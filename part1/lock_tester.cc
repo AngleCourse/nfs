@@ -61,7 +61,7 @@ test1(void)
     lc[0]->release(a);
     check_release(a);
 
-    printf ("acquire a acquire b release b releasea \n");
+    printf ("acquire a acquire b release b release a \n");
     lc[0]->acquire(a);
     check_grant(a);
     lc[0]->acquire(b);
@@ -168,7 +168,7 @@ main(int argc, char *argv[])
     assert(pthread_mutex_init(&count_mutex, NULL) == 0);
 
     printf("simple lock client\n");
-    for (int i = 0; i < nt; i++) lc[i] = new lock_client(dst);
+    for (int i = 0; i < nt; i++) lc[i] = new lock_client(dst, true);
 
     if(!test || test == 1){
       test1();

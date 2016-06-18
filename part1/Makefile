@@ -42,5 +42,11 @@ lock_client.o: lock_client.cc rpc.cc
 lock_server.o: lock_server.cc
 	g++ -c ${CXXFLAGS} lock_server.cc
 
+run-tester: lock_server lock_tester
+	./lock_server 4000 > /dev/null 2>&1 &
+	for i in $$(seq 5); do ./lock_tester 4000 $$i; done;
+	kill -9 $$(ps -aux | grep 'lock_server' | awk '{print $$2}')
+
+
 clean: 
 	rm -rf *.o yfs_client extent_server lock_server lock_tester lock_demo rpctest 

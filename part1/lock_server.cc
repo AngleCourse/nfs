@@ -1,6 +1,7 @@
 // the lock server implementation
 
 #include "lock_server.h"
+#include <time.h>
 #include <sstream>
 #include <stdio.h>
 #include <unistd.h>
@@ -28,6 +29,9 @@ lock_server::stat(int clt, lock_protocol::lockid_t lid, int &r)
  */
 lock_protocol::status
 lock_server::acquire(int clt, lock_protocol::lockid_t lid, int &r){
+  struct timespec tv;
+  clock_gettime(CLOCK_MONOTONIC, &tv);
+  long clt_stamp = clt + tv.tv_nsec;
   lock_protocol::status ret = lock_protocol::OK;
   printf("acquire request from clt %d of lock %lld\n", clt, lid);
   r = 0;
@@ -36,26 +40,45 @@ lock_server::acquire(int clt, lock_protocol::lockid_t lid, int &r){
   // if lock of lid is not held by a client, add it and return
   // or block untill the lock is released
   assert(pthread_mutex_lock(&_req_lock) == 0);
-  std::unordered_map<lock_protocol::lockid_t, std::queue<int>>::const_iterator
+  std::unordered_map<lock_protocol::lockid_t, std::deque<long>>::iterator
     got = requests.find(lid);
   if(got == requests.end()){
-    std::queue<int> *req_clts = new std::queue<int>();
-    printf("lock %lld queue address %p\n", lid, req_clts);
-    req_clts->push(clt);
-    requests.insert(std::pair<lock_protocol::lockid_t, std::queue<int>>(
+    std::deque<long> *req_clts = new std::deque<long>();
+    //printf("lock %lld queue address %p\n", lid, req_clts);
+    req_clts->push_back(clt_stamp);
+    requests.insert(std::pair<lock_protocol::lockid_t, std::deque<long>>(
           lid, *req_clts));
+    if(debug){
+      printf("clt %d creates wait list for lock %lld\n", clt, lid);
+    }
     is_consent = true;
+    nacquire++;
+  }else{
+    (got->second).push_back(clt_stamp);
+    if(debug){
+      printf("clt %d lock %lld wait list is %s\n",
+          clt, lid, printWaitList(got->second).c_str());
+    }
   }
   assert(pthread_mutex_unlock(&_req_lock) == 0);
   if(is_consent){
+    if(debug){
+      printf("clt %d get lock %lld\n", clt, lid);
+    }
     return ret;
   }
   assert(pthread_mutex_lock(&_req_cond_lock) == 0);
   for(;;){
+    is_consent=true;
     assert(pthread_mutex_lock(&_req_lock) == 0);
     got = requests.find(lid);
-    if((got->second).front() == clt){
+    if((got->second).front() == clt_stamp){
       is_consent = false;
+      nacquire++;
+    }
+    if(debug){
+      printf("Spin to clt %d and wait list of lock %lld is %s\n",
+          clt, lid, printWaitList(got->second).c_str());
     }
     assert(pthread_mutex_unlock(&_req_lock) == 0);
     if(is_consent){
@@ -65,7 +88,10 @@ lock_server::acquire(int clt, lock_protocol::lockid_t lid, int &r){
       break;
     }
   }
-  assert(pthread_mutex_lock(&_req_cond_lock) == 0);
+  assert(pthread_mutex_unlock(&_req_cond_lock) == 0);
+  if(debug){
+    printf("clt %d get lock %lld\n", clt, lid);
+  }
   return ret;
 }
 /**
@@ -77,19 +103,41 @@ lock_server::release(int clt, lock_protocol::lockid_t lid, int &r){
   printf("release request from clt %d of lock %lld\n", clt, lid);
   r = 0;
   assert(pthread_mutex_lock(&_req_lock) == 0);
-  std::unordered_map<lock_protocol::lockid_t, std::queue<int>>::const_iterator
+  std::unordered_map<lock_protocol::lockid_t, std::deque<long>>::iterator
     got = requests.find(lid);
-  if((got->second).size() == 1){
-    printf("lock %lld queue address %p\n", lid, &(got->second));
-    //delete &(got->second);
-    requests.erase(lid);
-  }else{
-    std::queue<int> q = got->second;
-    q.pop();
+  if(got != requests.end()){
+    if((got->second).size() == 1){
+      //printf("lock %lld queue address %p\n", lid, &(got->second));
+      //delete &(got->second);
+      if(debug){
+        printf("clt %d is going to erase wait list %s of lock %lld\n",
+            clt, printWaitList(got->second).c_str(), lid);
+      }
+      requests.erase(lid);
+    }else{
+      if(debug){
+        printf("clt %d gonna pop %ld from wait list of lock %lld\n", 
+            clt, (got->second).front(), lid);
+      }
+      (got->second).pop_front();
+    }
+    assert(pthread_cond_broadcast(&_req_cond) == 0);
   }
   assert(pthread_mutex_unlock(&_req_lock) == 0);
-  assert(pthread_cond_signal(&_req_cond) == 0);
   return ret;
 }
+
+std::string 
+lock_server::printWaitList(std::deque<long> q){
+  std::string ret = "[ ";
+  for(unsigned i = 0; i < q.size(); i++){
+    ret += " " + std::to_string(q[i]) + " ";
+  }
+  ret += "]";
+  return ret;
+}
+
+
+
 
 
